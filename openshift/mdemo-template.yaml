@@ -1,0 +1,518 @@
+apiVersion: v1
+kind: Template
+metadata:
+  creationTimestamp: null
+  name: mdemo
+objects:
+- apiVersion: v1
+  kind: Service
+  metadata:
+    creationTimestamp: null
+    name: configuration
+  spec:
+    ports:
+    - port: 5672
+      protocol: TCP
+      targetPort: 5672
+    selector:
+      name: configmap-bridge
+    sessionAffinity: None
+    type: ClusterIP
+  status:
+    loadBalancer: {}
+- apiVersion: v1
+  kind: Service
+  metadata:
+    creationTimestamp: null
+    name: messaging
+  spec:
+    ports:
+    - port: 5672
+      protocol: TCP
+      targetPort: 5672
+    selector:
+      capability: router
+    sessionAffinity: None
+    type: ClusterIP
+  status:
+    loadBalancer: {}
+- apiVersion: v1
+  kind: Service
+  metadata:
+    creationTimestamp: null
+    name: ragent
+  spec:
+    ports:
+    - port: 55672
+      protocol: TCP
+      targetPort: 55672
+    selector:
+      name: ragent
+    sessionAffinity: None
+    type: ClusterIP
+  status:
+    loadBalancer: {}
+- apiVersion: v1
+  kind: Service
+  metadata:
+    creationTimestamp: null
+    name: console
+  spec:
+    ports:
+    - port: 8080
+      protocol: TCP
+      targetPort: 8080
+    selector:
+      name: console
+    sessionAffinity: None
+    type: ClusterIP
+  status:
+    loadBalancer: {}
+- apiVersion: v1
+  kind: Service
+  metadata:
+    creationTimestamp: null
+    name: wsproxy
+  spec:
+    ports:
+    - port: 5673
+      protocol: TCP
+      targetPort: 5673
+    selector:
+      name: wsproxy
+    sessionAffinity: None
+    type: ClusterIP
+  status:
+    loadBalancer: {}
+- apiVersion: v1
+  kind: Pod
+  metadata:
+    labels:
+      name: console
+    name: console
+  spec:
+    containers:
+    - name: console
+      image: ernieallen/dispatch-console
+      imagePullPolicy: IfNotPresent
+      ports:
+      - containerPort: 8080
+- apiVersion: v1
+  kind: Pod
+  metadata:
+    labels:
+      name: wsproxy
+    name: wsproxy
+  spec:
+    containers:
+    - name: wsproxy
+      image: tedross/hawtio-proxy
+      imagePullPolicy: IfNotPresent
+      ports:
+      - containerPort: 5673
+- apiVersion: v1
+  kind: ReplicationController
+  metadata:
+    creationTimestamp: null
+    generation: 1
+    labels:
+      name: configmap-bridge
+    name: configmap-bridge
+  spec:
+    replicas: 1
+    selector:
+      name: configmap-bridge
+    template:
+      metadata:
+        creationTimestamp: null
+        labels:
+          name: configmap-bridge
+      spec:
+        containers:
+        - image: enmasseproject/configmap-bridge:latest
+          imagePullPolicy: IfNotPresent
+          name: bridge
+          ports:
+          - containerPort: 5672
+            protocol: TCP
+          resources: {}
+          terminationMessagePath: /dev/termination-log
+        dnsPolicy: ClusterFirst
+        restartPolicy: Always
+        securityContext: {}
+        terminationGracePeriodSeconds: 30
+  status:
+    replicas: 0
+- apiVersion: v1
+  kind: ReplicationController
+  metadata:
+    creationTimestamp: null
+    generation: 1
+    labels:
+      name: qdrouterd
+    name: qdrouterd
+  spec:
+    replicas: 1
+    selector:
+      name: qdrouterd
+    template:
+      metadata:
+        creationTimestamp: null
+        labels:
+          capability: router
+          name: qdrouterd
+      spec:
+        containers:
+        - image: gordons/qdrouterd:v9
+          imagePullPolicy: IfNotPresent
+          name: master
+          ports:
+          - containerPort: 5672
+            protocol: TCP
+          env:
+          - name: LINK_CAPACITY
+            value: "10"
+          resources: {}
+          terminationMessagePath: /dev/termination-log
+        dnsPolicy: ClusterFirst
+        restartPolicy: Always
+        securityContext: {}
+        terminationGracePeriodSeconds: 30
+  status:
+    replicas: 0
+- apiVersion: v1
+  kind: ReplicationController
+  metadata:
+    creationTimestamp: null
+    generation: 1
+    labels:
+      name: ragent
+    name: ragent
+  spec:
+    replicas: 1
+    selector:
+      name: ragent
+    template:
+      metadata:
+        creationTimestamp: null
+        labels:
+          name: ragent
+      spec:
+        containers:
+        - image: enmasseproject/ragent:latest
+          imagePullPolicy: IfNotPresent
+          name: master
+          ports:
+          - containerPort: 55672
+            protocol: TCP
+          resources: {}
+          terminationMessagePath: /dev/termination-log
+        dnsPolicy: ClusterFirst
+        restartPolicy: Always
+        securityContext: {}
+        terminationGracePeriodSeconds: 30
+  status:
+    replicas: 0
+- apiVersion: v1
+  kind: ReplicationController
+  metadata:
+    creationTimestamp: null
+    generation: 1
+    labels:
+      name: rc-generator
+    name: rc-generator
+  spec:
+    replicas: 1
+    selector:
+      name: rc-generator
+    template:
+      metadata:
+        creationTimestamp: null
+        labels:
+          name: rc-generator
+      spec:
+        containers:
+        - image: enmasseproject/rc-generator:latest
+          imagePullPolicy: IfNotPresent
+          name: master
+          resources: {}
+          terminationMessagePath: /dev/termination-log
+        env:
+        - name: ROUTER_IMAGE
+          value: "gordons/qdrouterd:v9"
+        - name: LINK_CAPACITY
+          value: "10"
+        dnsPolicy: ClusterFirst
+        restartPolicy: Always
+        securityContext: {}
+        serviceAccount: deployer
+        serviceAccountName: deployer
+        terminationGracePeriodSeconds: 30
+  status:
+    replicas: 0
+- apiVersion: v1
+  kind: DeploymentConfig
+  metadata:
+    annotations:
+      openshift.io/deployment.cancelled: "4"
+    creationTimestamp: null
+    generation: 16
+    labels:
+      name: demo-recv-50
+    name: demo-recv-50
+  spec:
+    replicas: 0
+    selector:
+      name: demo-recv-50
+    strategy:
+      resources: {}
+      rollingParams:
+        intervalSeconds: 1
+        maxSurge: 25%
+        maxUnavailable: 25%
+        timeoutSeconds: 600
+        updatePeriodSeconds: 1
+      type: Rolling
+    template:
+      metadata:
+        creationTimestamp: null
+        labels:
+          name: demo-recv-50
+      spec:
+        containers:
+        - env:
+          - name: MESSAGE_ADDR
+            value: "service.process"
+          - name: MESSAGE_RATE
+            value: "50"
+          image: tedross/demo-recv
+          imagePullPolicy: IfNotPresent
+          name: master
+          resources: {}
+          terminationMessagePath: /dev/termination-log
+        dnsPolicy: ClusterFirst
+        restartPolicy: Always
+        securityContext: {}
+        serviceAccount: deployer
+        serviceAccountName: deployer
+        terminationGracePeriodSeconds: 30
+    test: false
+    triggers:
+    - type: ConfigChange
+  status:
+    observedGeneration: 16
+- apiVersion: v1
+  kind: DeploymentConfig
+  metadata:
+    annotations:
+      openshift.io/deployment.cancelled: "4"
+    creationTimestamp: null
+    generation: 16
+    labels:
+      name: demo-recv-25
+    name: demo-recv-25
+  spec:
+    replicas: 0
+    selector:
+      name: demo-recv-25
+    strategy:
+      resources: {}
+      rollingParams:
+        intervalSeconds: 1
+        maxSurge: 25%
+        maxUnavailable: 25%
+        timeoutSeconds: 600
+        updatePeriodSeconds: 1
+      type: Rolling
+    template:
+      metadata:
+        creationTimestamp: null
+        labels:
+          name: demo-recv-25
+      spec:
+        containers:
+        - env:
+          - name: MESSAGE_ADDR
+            value: "service.process"
+          - name: MESSAGE_RATE
+            value: "25"
+          image: tedross/demo-recv
+          imagePullPolicy: IfNotPresent
+          name: master
+          resources: {}
+          terminationMessagePath: /dev/termination-log
+        dnsPolicy: ClusterFirst
+        restartPolicy: Always
+        securityContext: {}
+        serviceAccount: deployer
+        serviceAccountName: deployer
+        terminationGracePeriodSeconds: 30
+    test: false
+    triggers:
+    - type: ConfigChange
+  status:
+    observedGeneration: 16
+- apiVersion: v1
+  kind: DeploymentConfig
+  metadata:
+    annotations:
+      openshift.io/deployment.cancelled: "4"
+    creationTimestamp: null
+    generation: 16
+    labels:
+      name: demo-recv-queue-50
+    name: demo-recv-queue-50
+  spec:
+    replicas: 0
+    selector:
+      name: demo-recv-queue-50
+    strategy:
+      resources: {}
+      rollingParams:
+        intervalSeconds: 1
+        maxSurge: 25%
+        maxUnavailable: 25%
+        timeoutSeconds: 600
+        updatePeriodSeconds: 1
+      type: Rolling
+    template:
+      metadata:
+        creationTimestamp: null
+        labels:
+          name: demo-recv-queue-50
+      spec:
+        containers:
+        - env:
+          - name: MESSAGE_ADDR
+            value: "workqueue"
+          - name: MESSAGE_RATE
+            value: "50"
+          image: tedross/demo-recv
+          imagePullPolicy: IfNotPresent
+          name: master
+          resources: {}
+          terminationMessagePath: /dev/termination-log
+        dnsPolicy: ClusterFirst
+        restartPolicy: Always
+        securityContext: {}
+        serviceAccount: deployer
+        serviceAccountName: deployer
+        terminationGracePeriodSeconds: 30
+    test: false
+    triggers:
+    - type: ConfigChange
+  status:
+    observedGeneration: 16
+- apiVersion: v1
+  kind: DeploymentConfig
+  metadata:
+    annotations:
+      openshift.io/deployment.cancelled: "4"
+    creationTimestamp: null
+    generation: 16
+    labels:
+      name: demo-send-100
+    name: demo-send-100
+  spec:
+    replicas: 0
+    selector:
+      name: demo-send-100
+    strategy:
+      resources: {}
+      rollingParams:
+        intervalSeconds: 1
+        maxSurge: 25%
+        maxUnavailable: 25%
+        timeoutSeconds: 600
+        updatePeriodSeconds: 1
+      type: Rolling
+    template:
+      metadata:
+        creationTimestamp: null
+        labels:
+          name: demo-send-100
+      spec:
+        containers:
+        - env:
+          - name: MESSAGE_ADDR
+            value: "service.process"
+          - name: MESSAGE_RATE
+            value: "100"
+          image: tedross/demo-send
+          imagePullPolicy: IfNotPresent
+          name: master
+          resources: {}
+          terminationMessagePath: /dev/termination-log
+        dnsPolicy: ClusterFirst
+        restartPolicy: Always
+        securityContext: {}
+        serviceAccount: deployer
+        serviceAccountName: deployer
+        terminationGracePeriodSeconds: 30
+    test: false
+    triggers:
+    - type: ConfigChange
+  status:
+    observedGeneration: 16
+- apiVersion: v1
+  kind: DeploymentConfig
+  metadata:
+    annotations:
+      openshift.io/deployment.cancelled: "4"
+    creationTimestamp: null
+    generation: 16
+    labels:
+      name: demo-send-queue-100
+    name: demo-send-queue-100
+  spec:
+    replicas: 0
+    selector:
+      name: demo-send-queue-100
+    strategy:
+      resources: {}
+      rollingParams:
+        intervalSeconds: 1
+        maxSurge: 25%
+        maxUnavailable: 25%
+        timeoutSeconds: 600
+        updatePeriodSeconds: 1
+      type: Rolling
+    template:
+      metadata:
+        creationTimestamp: null
+        labels:
+          name: demo-send-queue-100
+      spec:
+        containers:
+        - env:
+          - name: MESSAGE_ADDR
+            value: "workqueue"
+          - name: MESSAGE_RATE
+            value: "100"
+          image: tedross/demo-send
+          imagePullPolicy: IfNotPresent
+          name: master
+          resources: {}
+          terminationMessagePath: /dev/termination-log
+        dnsPolicy: ClusterFirst
+        restartPolicy: Always
+        securityContext: {}
+        serviceAccount: deployer
+        serviceAccountName: deployer
+        terminationGracePeriodSeconds: 30
+    test: false
+    triggers:
+    - type: ConfigChange
+  status:
+    observedGeneration: 16
+- apiVersion: v1
+  kind: ConfigMap
+  metadata:
+    name: maas
+  data:
+    json: |
+      {
+          "workqueue": { "store_and_forward":true, "multicast":false },
+          "service": { "store_and_forward":false, "multicast":false },
+          "broadcast": { "store_and_forward":false, "multicast":true }
+      }
