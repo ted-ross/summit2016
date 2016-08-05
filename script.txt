@@ -1,3 +1,14 @@
+=======
+Terminals:
+
+  - Openshift Origin CLI
+  - Console Run
+  - Proxy Run
+  - Router Run
+  - AWS Shell
+
+
+======= Origin CLI =======
 
 docker run -d --name "origin" \
         --privileged --pid=host --net=host \
@@ -14,20 +25,18 @@ oc new-project mdemo
 oc policy add-role-to-user view system:serviceaccount:$(oc project -q):default
 oc policy add-role-to-user edit system:serviceaccount:$(oc project -q):deployer
 
-=======
+
+======= Console Run =======
+
 docker run --net host docker.io/ernieallen/dispatch-console
 
-=======
+
+======= Proxy Run =======
+
 node proxy.js -p 5673 -t 5672 -h $MESSAGING_SERVICE
 
-=======
-Terminals:
+  $MESSAGING_SERVICE is found from "oc get services" in the Origin CLI.
 
-  - Openshift Origin CLI
-  - Console Run
-  - Proxy Run
-  - Router Run
-  - AWS Shell
 
 =======
 Browser Pages:
