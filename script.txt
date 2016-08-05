@@ -1,0 +1,39 @@
+
+docker run -d --name "origin" \
+        --privileged --pid=host --net=host \
+        -v /:/rootfs:ro -v /var/run:/var/run:rw -v /sys:/sys -v /var/lib/docker:/var/lib/docker:rw \
+        -v /var/lib/origin/openshift.local.volumes:/var/lib/origin/openshift.local.volumes \
+        openshift/origin start
+
+docker exec -it origin bash
+
+oc login
+
+oc new-project mdemo
+
+oc policy add-role-to-user view system:serviceaccount:$(oc project -q):default
+oc policy add-role-to-user edit system:serviceaccount:$(oc project -q):deployer
+
+=======
+docker run --net host docker.io/ernieallen/dispatch-console
+
+=======
+node proxy.js -p 5673 -t 5672 -h $MESSAGING_SERVICE
+
+=======
+Terminals:
+
+  - Openshift Origin CLI
+  - Console Run
+  - Proxy Run
+  - Router Run
+  - AWS Shell
+
+=======
+Browser Pages:
+
+  - Laptop Openshift - https://localhost:8443
+  - Hawtio Console   - http://localhost:8080/hawtio/
+  - AWS Openshift    - https://ec2-<specifics>.compute.amazonaws.com:8443
+
+

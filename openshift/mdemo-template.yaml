@@ -69,64 +69,6 @@ objects:
   status:
     loadBalancer: {}
 - apiVersion: v1
-  kind: Service
-  metadata:
-    creationTimestamp: null
-    name: console
-  spec:
-    ports:
-    - port: 8080
-      protocol: TCP
-      targetPort: 8080
-    selector:
-      name: console
-    sessionAffinity: None
-    type: ClusterIP
-  status:
-    loadBalancer: {}
-- apiVersion: v1
-  kind: Service
-  metadata:
-    creationTimestamp: null
-    name: wsproxy
-  spec:
-    ports:
-    - port: 5673
-      protocol: TCP
-      targetPort: 5673
-    selector:
-      name: wsproxy
-    sessionAffinity: None
-    type: ClusterIP
-  status:
-    loadBalancer: {}
-- apiVersion: v1
-  kind: Pod
-  metadata:
-    labels:
-      name: console
-    name: console
-  spec:
-    containers:
-    - name: console
-      image: ernieallen/dispatch-console
-      imagePullPolicy: IfNotPresent
-      ports:
-      - containerPort: 8080
-- apiVersion: v1
-  kind: Pod
-  metadata:
-    labels:
-      name: wsproxy
-    name: wsproxy
-  spec:
-    containers:
-    - name: wsproxy
-      image: tedross/hawtio-proxy
-      imagePullPolicy: IfNotPresent
-      ports:
-      - containerPort: 5673
-- apiVersion: v1
   kind: ReplicationController
   metadata:
     creationTimestamp: null
@@ -274,12 +216,12 @@ objects:
     creationTimestamp: null
     generation: 16
     labels:
-      name: demo-recv-50
-    name: demo-recv-50
+      name: demo-server-50
+    name: demo-server-50
   spec:
     replicas: 0
     selector:
-      name: demo-recv-50
+      name: demo-server-50
     strategy:
       resources: {}
       rollingParams:
@@ -293,7 +235,7 @@ objects:
       metadata:
         creationTimestamp: null
         labels:
-          name: demo-recv-50
+          name: demo-server-50
       spec:
         containers:
         - env:
@@ -325,12 +267,12 @@ objects:
     creationTimestamp: null
     generation: 16
     labels:
-      name: demo-recv-25
-    name: demo-recv-25
+      name: demo-server-25
+    name: demo-server-25
   spec:
     replicas: 0
     selector:
-      name: demo-recv-25
+      name: demo-server-25
     strategy:
       resources: {}
       rollingParams:
@@ -344,7 +286,7 @@ objects:
       metadata:
         creationTimestamp: null
         labels:
-          name: demo-recv-25
+          name: demo-server-25
       spec:
         containers:
         - env:
@@ -427,12 +369,12 @@ objects:
     creationTimestamp: null
     generation: 16
     labels:
-      name: demo-send-100
-    name: demo-send-100
+      name: demo-client-100
+    name: demo-client-100
   spec:
     replicas: 0
     selector:
-      name: demo-send-100
+      name: demo-client-100
     strategy:
       resources: {}
       rollingParams:
@@ -446,7 +388,7 @@ objects:
       metadata:
         creationTimestamp: null
         labels:
-          name: demo-send-100
+          name: demo-client-100
       spec:
         containers:
         - env:
